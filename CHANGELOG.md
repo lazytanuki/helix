@@ -1,6 +1,6 @@
 # 22.05 (UNRELEASED)
 
-> Checkpoint: `ac2ea800ce267b9ed3da5f743085f0afe8460473`
+> Checkpoint: `40647f03ed561532727d5939ccccf485045c4b5e`
 
 Contributors in this release: `X`.
 
@@ -68,6 +68,7 @@ Usability improvements and fixes:
 - Treat slashes as word separators in prompts (#2315)
 - Auto-complete directory members (#1682)
 - Allow disabling format-on-save as a global editor setting (#2321)
+- Wrap command palette in overlay (#2378)
 
 Themes:
 
@@ -87,6 +88,7 @@ Themes:
 - Add `onelight` (#2287, #2323)
 - Add `ui.virtual` scopes to `onedark` theme (3626e38)
 - Add `night_owl` (#2330)
+- Use yellow foreground and red background for `monokai_pro_spectrum` (#2433)
 
 LSP:
 
@@ -120,7 +122,10 @@ New Languages:
 - Hare (#2289)
 - DeviceTree (#2329)
 - Cairo (7387905)
-- CPON (#2355)
+- CPON (#2355, #2424)
+- git-ignore (#2397)
+- git-attributes (#2397)
+- Odin (#2399)
 
 Updated Languages and Queries:
 
@@ -133,6 +138,10 @@ Updated Languages and Queries:
 - Fix Golang textobject queries (#2153)
 - Add more bash and HCL file extensions (#2201)
 - Divide HCL and tfvars into separate languages (#2244)
+- Use JavaScript for `cjs` files (#2387)
+- Use Perl for `t` files (#2395)
+- Use `markup.list` scopes for lists (#2401)
+- Use PHP for `inc` files (#2440)
 
 Packaging:
 
