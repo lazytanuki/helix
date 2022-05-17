@@ -1,6 +1,6 @@
 # 22.05 (UNRELEASED)
 
-> Checkpoint: `40647f03ed561532727d5939ccccf485045c4b5e`
+> Checkpoint: `595213ca74e360d8de37fe7aa8f0f05ae6ec8f21`
 
 Contributors in this release: `X`.
 
@@ -35,6 +35,7 @@ Commands:
 - `:run-shell-command` which does not interact with selections (#1682)
 - `:reflow` which hard-wraps selected text (#2128)
 - `commit_undo_checkpoint` which adds an undo checkpoint (#2115)
+- `:log-open` which opens the log file (#2422)
 
 Usability improvements and fixes:
 
@@ -69,6 +70,11 @@ Usability improvements and fixes:
 - Auto-complete directory members (#1682)
 - Allow disabling format-on-save as a global editor setting (#2321)
 - Wrap command palette in overlay (#2378)
+- Prevent selections from collapsing when inserting newlines (#2414)
+- Allow configuration of LSP request timeout (#2405)
+- Use debug console on Windows for DAP terminal (#2294)
+- Exclude cursor when deleting with `C-w` in insert mode (#2431)
+- Prevent panics from LSP parsing errors (7ae6cad)
 
 Themes:
 
@@ -89,6 +95,7 @@ Themes:
 - Add `ui.virtual` scopes to `onedark` theme (3626e38)
 - Add `night_owl` (#2330)
 - Use yellow foreground and red background for `monokai_pro_spectrum` (#2433)
+- Add `snazzy` (#2473)
 
 LSP:
 
@@ -119,13 +126,14 @@ New Languages:
 - `go.mod` and `go.work` (#2197)
 - Nushell (#2225)
 - Vala (#2243)
-- Hare (#2289)
+- Hare (#2289, #2480)
 - DeviceTree (#2329)
 - Cairo (7387905)
 - CPON (#2355, #2424)
 - git-ignore (#2397)
 - git-attributes (#2397)
-- Odin (#2399)
+- Odin (#2399, #2464)
+- Meson (#2314)
 
 Updated Languages and Queries:
 
