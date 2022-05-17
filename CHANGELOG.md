@@ -14,12 +14,10 @@ Breaking Changes:
 Features:
 
 - The indentation mechanism has been reworked (#1562, #1908)
-- Shell auto-completion files are now available (#2022)
 - Configurable gutters (#1967)
 - Support for local language configuration (#1249)
 - Configurable themed rulers (#2060)
 - Render visible whitespace (e6b865e, #2322, #2331)
-- Add `m` textobject that selects closest surrounding pair (de15d70, 76175db)
 
 Commands:
 
@@ -28,6 +26,7 @@ Commands:
 - `:set-language` to set the buffers language (#1866, #1996)
 - Command for picking files from the current working directory (`Space-F`) (#1600, #2308)
 - `:write!` which creates non-existent subdirectories (#1839)
+- Add `m` textobject that selects closest surrounding pair (de15d70, 76175db)
 - `:pipe` typable command for piping selections (#1972)
 - `extend_line_above` which extends to previous lines (#2117)
 - `set_line_ending` which replaces line endings (#1871)
@@ -56,6 +55,7 @@ Usability improvements and fixes:
 - LSP: fix auto-import (#2088)
 - Send active diagnostic to LSP when requesting code actions (#2005)
 - Prevent panic when parsing malformed LSP `PublishDiagnostic` (#2160)
+- Shell auto-completion files are now available (#2022)
 - Restore document state on completion cancel (#2096)
 - Only merge top-level array when merging `languages.toml` (#2145, #2215)
 - Fix open on multiline selection (#2161)
