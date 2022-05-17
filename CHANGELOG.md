@@ -2,7 +2,7 @@
 
 > Checkpoint: `595213ca74e360d8de37fe7aa8f0f05ae6ec8f21`
 
-Contributors in this release: `X`.
+Contributors in this release: `99`.
 
 Breaking Changes:
 
