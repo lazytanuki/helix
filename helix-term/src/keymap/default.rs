@@ -65,7 +65,8 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "o" => open_below,
         "O" => open_above,
 
-        "d" => delete_selection,
+        // "d" => delete_selection,
+        "d" => delete_find,
         "A-d" => delete_selection_noyank,
         "c" => change_selection,
         "A-c" => change_selection_noyank,

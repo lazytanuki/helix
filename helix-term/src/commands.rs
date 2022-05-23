@@ -249,6 +249,7 @@ impl MappableCommand {
         extend_to_line_bounds, "Extend selection to line bounds (line-wise selection)",
         shrink_to_line_bounds, "Shrink selection to line bounds (line-wise selection)",
         delete_selection, "Delete selection",
+        delete_find, "Delete find",
         delete_selection_noyank, "Delete selection, without yanking",
         change_selection, "Change selection (delete and enter insert mode)",
         change_selection_noyank, "Change selection (delete and enter insert mode, without yanking)",
@@ -2034,6 +2035,67 @@ fn delete_selection_insert_mode(doc: &mut Document, view: &View, selection: &Sel
 
 fn delete_selection(cx: &mut Context) {
     delete_selection_impl(cx, Operation::Delete);
+}
+
+// TODO:
+// - count
+// - fix will_find_char that extends after deletion
+// - more key events
+fn delete_find(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id);
+
+    // If one selection range is more than one char wide, wait until next keycode to determine what to delete
+    if selection.ranges().iter().any(|r| r.len() > 1) {
+        delete_selection_impl(cx, Operation::Delete);
+    } else {
+        // Wait until next keycode to determine what to delete
+        cx.on_next_key(move |cx, event| {
+            if let Some(ch) = event.char() {
+                match ch {
+                    'd' => {
+                        extend_line(cx);
+                        delete_selection(cx);
+                    }
+                    'i' => {
+                        select_textobject(cx, textobject::TextObject::Inside);
+                        delete_selection(cx);
+                    }
+                    't' => {
+                        // will_find_char(cx, find_next_char_impl, false, true);
+                        // TODO: this should be inside a function, maybe add an argument to will_find_char ?
+                        cx.on_next_key(move |cx, event| {
+                            let ch = match event {
+                                KeyEvent {
+                                    code: KeyCode::Char(ch),
+                                    ..
+                                } => ch,
+                                _ => return,
+                            };
+                            find_char_impl(
+                                cx.editor,
+                                &find_next_char_impl,
+                                false,
+                                true,
+                                ch,
+                                cx.count(),
+                            );
+                            delete_selection(cx);
+                        });
+                    }
+                    'w' => {
+                        extend_word_impl(cx, movement::move_next_long_word_end);
+                        delete_selection(cx);
+                    }
+                    'b' => {
+                        extend_word_impl(cx, movement::move_prev_long_word_start);
+                        delete_selection(cx);
+                    }
+                    _ => return,
+                }
+            };
+        });
+    }
 }
 
 fn delete_selection_noyank(cx: &mut Context) {
