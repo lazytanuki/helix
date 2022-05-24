@@ -1072,9 +1072,15 @@ fn extend_next_long_word_end(cx: &mut Context) {
     extend_word_impl(cx, movement::move_next_long_word_end)
 }
 
-fn will_find_char<F>(cx: &mut Context, search_fn: F, inclusive: bool, extend: bool)
-where
+fn will_find_char<F, C>(
+    cx: &mut Context,
+    search_fn: F,
+    inclusive: bool,
+    extend: bool,
+    after_motion_callback: C,
+) where
     F: Fn(RopeSlice, char, usize, usize, bool) -> Option<usize> + 'static,
+    C: Fn(&mut Context) + 'static,
 {
     // TODO: count is reset to 1 before next key so we move it into the closure here.
     // Would be nice to carry over.
@@ -1108,6 +1114,7 @@ where
         cx.editor.last_motion = Some(Motion(Box::new(move |editor: &mut Editor| {
             find_char_impl(editor, &search_fn, inclusive, true, ch, 1);
         })));
+        after_motion_callback(cx);
     })
 }
 
@@ -1186,35 +1193,35 @@ fn find_prev_char_impl(
 }
 
 fn find_till_char(cx: &mut Context) {
-    will_find_char(cx, find_next_char_impl, false, false)
+    will_find_char(cx, find_next_char_impl, false, false, no_op)
 }
 
 fn find_next_char(cx: &mut Context) {
-    will_find_char(cx, find_next_char_impl, true, false)
+    will_find_char(cx, find_next_char_impl, true, false, no_op)
 }
 
 fn extend_till_char(cx: &mut Context) {
-    will_find_char(cx, find_next_char_impl, false, true)
+    will_find_char(cx, find_next_char_impl, false, true, no_op)
 }
 
 fn extend_next_char(cx: &mut Context) {
-    will_find_char(cx, find_next_char_impl, true, true)
+    will_find_char(cx, find_next_char_impl, true, true, no_op)
 }
 
 fn till_prev_char(cx: &mut Context) {
-    will_find_char(cx, find_prev_char_impl, false, false)
+    will_find_char(cx, find_prev_char_impl, false, false, no_op)
 }
 
 fn find_prev_char(cx: &mut Context) {
-    will_find_char(cx, find_prev_char_impl, true, false)
+    will_find_char(cx, find_prev_char_impl, true, false, no_op)
 }
 
 fn extend_till_prev_char(cx: &mut Context) {
-    will_find_char(cx, find_prev_char_impl, false, true)
+    will_find_char(cx, find_prev_char_impl, false, true, no_op)
 }
 
 fn extend_prev_char(cx: &mut Context) {
-    will_find_char(cx, find_prev_char_impl, true, true)
+    will_find_char(cx, find_prev_char_impl, true, true, no_op)
 }
 
 fn repeat_last_motion(cx: &mut Context) {
@@ -2039,7 +2046,6 @@ fn delete_selection(cx: &mut Context) {
 
 // TODO:
 // - count
-// - fix will_find_char that extends after deletion
 // - more key events
 fn delete_find(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
@@ -2061,30 +2067,24 @@ fn delete_find(cx: &mut Context) {
                         select_textobject(cx, textobject::TextObject::Inside);
                         delete_selection(cx);
                     }
+                    'f' => {
+                        will_find_char(cx, find_next_char_impl, true, true, delete_selection);
+                    }
+                    'F' => {
+                        will_find_char(cx, find_prev_char_impl, true, true, delete_selection);
+                    }
                     't' => {
-                        // will_find_char(cx, find_next_char_impl, false, true);
-                        // TODO: this should be inside a function, maybe add an argument to will_find_char ?
-                        cx.on_next_key(move |cx, event| {
-                            let ch = match event {
-                                KeyEvent {
-                                    code: KeyCode::Char(ch),
-                                    ..
-                                } => ch,
-                                _ => return,
-                            };
-                            find_char_impl(
-                                cx.editor,
-                                &find_next_char_impl,
-                                false,
-                                true,
-                                ch,
-                                cx.count(),
-                            );
-                            delete_selection(cx);
-                        });
+                        will_find_char(cx, find_next_char_impl, false, true, delete_selection);
+                    }
+                    'T' => {
+                        will_find_char(cx, find_prev_char_impl, false, true, delete_selection);
+                    }
+                    'e' => {
+                        extend_word_impl(cx, movement::move_next_long_word_end);
+                        delete_selection(cx);
                     }
                     'w' => {
-                        extend_word_impl(cx, movement::move_next_long_word_end);
+                        extend_word_impl(cx, movement::move_next_word_start);
                         delete_selection(cx);
                     }
                     'b' => {
