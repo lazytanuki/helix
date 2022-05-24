@@ -2065,69 +2065,101 @@ fn delete_find(cx: &mut Context) {
                         std::num::NonZeroUsize::new(cx.count.map_or(i, |c| c.get() * 10 + i));
                     delete_find(cx);
                 }
+                key!('d') => {
+                    extend_line(cx);
+                    delete_selection(cx)
+                }
+                key!('i') => {
+                    select_textobject(cx, textobject::TextObject::Inside, delete_selection);
+                }
+                key!('a') => {
+                    select_textobject(cx, textobject::TextObject::Around, delete_selection);
+                }
+                key!('f') => {
+                    will_find_char(cx, find_next_char_impl, true, true, delete_selection);
+                }
+                key!('F') => {
+                    will_find_char(cx, find_prev_char_impl, true, true, delete_selection);
+                }
+                key!('t') => {
+                    will_find_char(cx, find_next_char_impl, false, true, delete_selection);
+                }
+                key!('T') => {
+                    will_find_char(cx, find_prev_char_impl, false, true, delete_selection);
+                }
+                key!('w') => {
+                    extend_word_impl(cx, movement::move_next_word_start);
+                    delete_selection(cx);
+                }
+                key!('W') => {
+                    extend_word_impl(cx, movement::move_next_long_word_start);
+                    delete_selection(cx);
+                }
+                key!('e') => {
+                    extend_word_impl(cx, movement::move_next_word_end);
+                    delete_selection(cx);
+                }
+                key!('E') => {
+                    extend_word_impl(cx, movement::move_next_long_word_end);
+                    delete_selection(cx);
+                }
+                key!('b') => {
+                    extend_word_impl(cx, movement::move_prev_word_start);
+                    delete_selection(cx);
+                }
+                key!('B') => {
+                    extend_word_impl(cx, movement::move_prev_long_word_start);
+                    delete_selection(cx);
+                }
                 KeyEvent {
-                    code: KeyCode::Char('d'),
+                    code: KeyCode::Home,
                     ..
-                } => {
+                }
+                | key!('^') => {
+                    extend_to_line_start(cx);
+                    delete_selection(cx);
+                }
+                KeyEvent {
+                    code: KeyCode::End, ..
+                }
+                | key!('$') => {
+                    extend_to_line_end(cx);
+                    delete_selection(cx);
+                }
+                KeyEvent {
+                    code: KeyCode::Up, ..
+                }
+                | key!('k') => {
+                    extend_line(cx); // TODO: on empty line, this extends to the line below
+                    extend_line_up(cx);
                     extend_line(cx);
                     delete_selection(cx);
                 }
                 KeyEvent {
-                    code: KeyCode::Char('i'),
+                    code: KeyCode::Down,
                     ..
-                } => {
-                    select_textobject(cx, textobject::TextObject::Inside, delete_selection);
                 }
-                KeyEvent {
-                    code: KeyCode::Char('a'),
-                    ..
-                } => {
-                    select_textobject(cx, textobject::TextObject::Around, delete_selection);
-                }
-                KeyEvent {
-                    code: KeyCode::Char('f'),
-                    ..
-                } => {
-                    will_find_char(cx, find_next_char_impl, true, true, delete_selection);
-                }
-                KeyEvent {
-                    code: KeyCode::Char('F'),
-                    ..
-                } => {
-                    will_find_char(cx, find_prev_char_impl, true, true, delete_selection);
-                }
-                KeyEvent {
-                    code: KeyCode::Char('t'),
-                    ..
-                } => {
-                    will_find_char(cx, find_next_char_impl, false, true, delete_selection);
-                }
-                KeyEvent {
-                    code: KeyCode::Char('T'),
-                    ..
-                } => {
-                    will_find_char(cx, find_prev_char_impl, false, true, delete_selection);
-                }
-                KeyEvent {
-                    code: KeyCode::Char('e'),
-                    ..
-                } => {
-                    extend_word_impl(cx, movement::move_next_long_word_end);
+                | key!('j') => {
+                    extend_line(cx);
+                    extend_line_down(cx);
                     delete_selection(cx);
                 }
                 KeyEvent {
-                    code: KeyCode::Char('w'),
+                    code: KeyCode::Left,
                     ..
-                } => {
-                    extend_word_impl(cx, movement::move_next_word_start);
+                }
+                | key!('h') => {
+                    move_char_left(cx);
                     delete_selection(cx);
                 }
                 KeyEvent {
-                    code: KeyCode::Char('b'),
+                    code: KeyCode::Right,
                     ..
-                } => {
-                    extend_word_impl(cx, movement::move_prev_long_word_start);
+                }
+                | key!('l') => {
+                    move_char_right(cx);
                     delete_selection(cx);
+                    move_char_left(cx);
                 }
                 _ => return,
             }
