@@ -250,9 +250,10 @@ impl MappableCommand {
         extend_to_line_bounds, "Extend selection to line bounds (line-wise selection)",
         shrink_to_line_bounds, "Shrink selection to line bounds (line-wise selection)",
         delete_selection, "Delete selection",
-        delete_find, "Delete find",
+        delete_find, "Delete next motion",
         delete_selection_noyank, "Delete selection, without yanking",
         change_selection, "Change selection (delete and enter insert mode)",
+        change_find, "Change next motion",
         change_selection_noyank, "Change selection (delete and enter insert mode, without yanking)",
         collapse_selection, "Collapse selection onto a single cursor",
         flip_selections, "Flip selection cursor and anchor",
@@ -2047,14 +2048,41 @@ fn delete_selection(cx: &mut Context) {
 
 // TODO:
 // - more key events (lines up, down, ...)
-fn delete_find(cx: &mut Context) {
+fn alter_find<F>(cx: &mut Context, after_found_callback: F, help_title: &'static str)
+where
+    F: Fn(&mut Context) + 'static,
+{
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
 
-    // If one selection range is more than one char wide, wait until next keycode to determine what to delete
-    if selection.ranges().iter().any(|r| r.len() > 1) {
-        delete_selection_impl(cx, Operation::Delete);
+    // If one selection range is more than one char wide or editor is not in select mode, perform the action now
+    if selection.ranges().iter().any(|r| r.len() > 1) || matches!(doc.mode, Mode::Select) {
+        after_found_callback(cx);
     } else {
+        let help_text = [
+            ("d", "line"),
+            ("t | T", "Until|from char, exclusive"),
+            ("f | F", "Until|from  char, inclusive"),
+            ("w | W", "Until next short|long word start"),
+            ("e | E", "Until short|long word end"),
+            ("b | B", "From prev short|long word start"),
+            ("i", "Inside object"),
+            ("a", "Around object"),
+            ("^ | Home", "From start of line"),
+            ("$ | End", "Until end of line"),
+            ("k | Up", "From line above"),
+            ("j | Down", "Until line above"),
+            ("h | Left", "Char on the left"),
+            ("l | Right", "Char on the right"),
+        ];
+        cx.editor.autoinfo = Some(Info::new(
+            help_title,
+            help_text
+                .into_iter()
+                .map(|(col1, col2)| (col1.to_string(), col2.to_string()))
+                .collect(),
+        ));
+
         // Wait until next keycode to determine what to delete
         cx.on_next_key(move |cx, event| {
             cx.count = cx.editor.count;
@@ -2063,53 +2091,64 @@ fn delete_find(cx: &mut Context) {
                     let i = i.to_digit(10).unwrap() as usize;
                     cx.editor.count =
                         std::num::NonZeroUsize::new(cx.count.map_or(i, |c| c.get() * 10 + i));
-                    delete_find(cx);
+                    alter_find(cx, after_found_callback, help_title);
                 }
                 key!('d') => {
                     extend_line(cx);
-                    delete_selection(cx)
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 key!('i') => {
-                    select_textobject(cx, textobject::TextObject::Inside, delete_selection);
+                    select_textobject(cx, textobject::TextObject::Inside, after_found_callback);
                 }
                 key!('a') => {
-                    select_textobject(cx, textobject::TextObject::Around, delete_selection);
+                    select_textobject(cx, textobject::TextObject::Around, after_found_callback);
                 }
                 key!('f') => {
-                    will_find_char(cx, find_next_char_impl, true, true, delete_selection);
+                    will_find_char(cx, find_next_char_impl, true, true, after_found_callback);
+                    cx.editor.autoinfo = None;
                 }
                 key!('F') => {
-                    will_find_char(cx, find_prev_char_impl, true, true, delete_selection);
+                    will_find_char(cx, find_prev_char_impl, true, true, after_found_callback);
+                    cx.editor.autoinfo = None;
                 }
                 key!('t') => {
-                    will_find_char(cx, find_next_char_impl, false, true, delete_selection);
+                    will_find_char(cx, find_next_char_impl, false, true, after_found_callback);
+                    cx.editor.autoinfo = None;
                 }
                 key!('T') => {
-                    will_find_char(cx, find_prev_char_impl, false, true, delete_selection);
+                    will_find_char(cx, find_prev_char_impl, false, true, after_found_callback);
+                    cx.editor.autoinfo = None;
                 }
                 key!('w') => {
                     extend_word_impl(cx, movement::move_next_word_start);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 key!('W') => {
                     extend_word_impl(cx, movement::move_next_long_word_start);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 key!('e') => {
                     extend_word_impl(cx, movement::move_next_word_end);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 key!('E') => {
                     extend_word_impl(cx, movement::move_next_long_word_end);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 key!('b') => {
                     extend_word_impl(cx, movement::move_prev_word_start);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 key!('B') => {
                     extend_word_impl(cx, movement::move_prev_long_word_start);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 KeyEvent {
                     code: KeyCode::Home,
@@ -2117,14 +2156,16 @@ fn delete_find(cx: &mut Context) {
                 }
                 | key!('^') => {
                     extend_to_line_start(cx);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 KeyEvent {
                     code: KeyCode::End, ..
                 }
                 | key!('$') => {
                     extend_to_line_end(cx);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 KeyEvent {
                     code: KeyCode::Up, ..
@@ -2133,7 +2174,8 @@ fn delete_find(cx: &mut Context) {
                     extend_line(cx); // TODO: on empty line, this extends to the line below
                     extend_line_up(cx);
                     extend_line(cx);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 KeyEvent {
                     code: KeyCode::Down,
@@ -2142,7 +2184,8 @@ fn delete_find(cx: &mut Context) {
                 | key!('j') => {
                     extend_line(cx);
                     extend_line_down(cx);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 KeyEvent {
                     code: KeyCode::Left,
@@ -2150,7 +2193,8 @@ fn delete_find(cx: &mut Context) {
                 }
                 | key!('h') => {
                     move_char_left(cx);
-                    delete_selection(cx);
+                    after_found_callback(cx);
+                    cx.editor.autoinfo = None;
                 }
                 KeyEvent {
                     code: KeyCode::Right,
@@ -2158,13 +2202,22 @@ fn delete_find(cx: &mut Context) {
                 }
                 | key!('l') => {
                     move_char_right(cx);
-                    delete_selection(cx);
+                    after_found_callback(cx);
                     move_char_left(cx);
+                    cx.editor.autoinfo = None;
                 }
                 _ => return,
             }
         });
     }
+}
+
+fn delete_find(cx: &mut Context) {
+    alter_find(cx, delete_selection, "Delete");
+}
+
+fn change_find(cx: &mut Context) {
+    alter_find(cx, change_selection, "Change");
 }
 
 fn delete_selection_noyank(cx: &mut Context) {
