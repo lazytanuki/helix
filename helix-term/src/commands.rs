@@ -2046,7 +2046,7 @@ fn delete_selection(cx: &mut Context) {
 
 // TODO:
 // - count
-// - more key events
+// - more key events (lines up, down, ...)
 fn delete_find(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
@@ -2064,8 +2064,10 @@ fn delete_find(cx: &mut Context) {
                         delete_selection(cx);
                     }
                     'i' => {
-                        select_textobject(cx, textobject::TextObject::Inside);
-                        delete_selection(cx);
+                        select_textobject(cx, textobject::TextObject::Inside, delete_selection);
+                    }
+                    'a' => {
+                        select_textobject(cx, textobject::TextObject::Around, delete_selection);
                     }
                     'f' => {
                         will_find_char(cx, find_next_char_impl, true, true, delete_selection);
@@ -4159,14 +4161,17 @@ fn goto_prev_comment(cx: &mut Context) {
 }
 
 fn select_textobject_around(cx: &mut Context) {
-    select_textobject(cx, textobject::TextObject::Around);
+    select_textobject(cx, textobject::TextObject::Around, no_op);
 }
 
 fn select_textobject_inner(cx: &mut Context) {
-    select_textobject(cx, textobject::TextObject::Inside);
+    select_textobject(cx, textobject::TextObject::Inside, no_op);
 }
 
-fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
+fn select_textobject<C>(cx: &mut Context, objtype: textobject::TextObject, after_select_callback: C)
+where
+    C: Fn(&mut Context) + 'static,
+{
     let count = cx.count();
 
     cx.on_next_key(move |cx, event| {
@@ -4214,6 +4219,7 @@ fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
             };
             textobject(cx.editor);
             cx.editor.last_motion = Some(Motion(Box::new(textobject)));
+            after_select_callback(cx);
         }
     });
 
