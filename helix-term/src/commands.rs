@@ -44,6 +44,7 @@ use movement::Movement;
 use crate::{
     args,
     compositor::{self, Component, Compositor},
+    keymap::macros::key,
     ui::{self, overlay::overlayed, FilePicker, Picker, Popup, Prompt, PromptEvent},
 };
 
@@ -2045,7 +2046,6 @@ fn delete_selection(cx: &mut Context) {
 }
 
 // TODO:
-// - count
 // - more key events (lines up, down, ...)
 fn delete_find(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
@@ -2057,45 +2057,80 @@ fn delete_find(cx: &mut Context) {
     } else {
         // Wait until next keycode to determine what to delete
         cx.on_next_key(move |cx, event| {
-            if let Some(ch) = event.char() {
-                match ch {
-                    'd' => {
-                        extend_line(cx);
-                        delete_selection(cx);
-                    }
-                    'i' => {
-                        select_textobject(cx, textobject::TextObject::Inside, delete_selection);
-                    }
-                    'a' => {
-                        select_textobject(cx, textobject::TextObject::Around, delete_selection);
-                    }
-                    'f' => {
-                        will_find_char(cx, find_next_char_impl, true, true, delete_selection);
-                    }
-                    'F' => {
-                        will_find_char(cx, find_prev_char_impl, true, true, delete_selection);
-                    }
-                    't' => {
-                        will_find_char(cx, find_next_char_impl, false, true, delete_selection);
-                    }
-                    'T' => {
-                        will_find_char(cx, find_prev_char_impl, false, true, delete_selection);
-                    }
-                    'e' => {
-                        extend_word_impl(cx, movement::move_next_long_word_end);
-                        delete_selection(cx);
-                    }
-                    'w' => {
-                        extend_word_impl(cx, movement::move_next_word_start);
-                        delete_selection(cx);
-                    }
-                    'b' => {
-                        extend_word_impl(cx, movement::move_prev_long_word_start);
-                        delete_selection(cx);
-                    }
-                    _ => return,
+            cx.count = cx.editor.count;
+            match event {
+                key!(i @ '0') | key!(i @ '1'..='9') => {
+                    let i = i.to_digit(10).unwrap() as usize;
+                    cx.editor.count =
+                        std::num::NonZeroUsize::new(cx.count.map_or(i, |c| c.get() * 10 + i));
+                    delete_find(cx);
                 }
-            };
+                KeyEvent {
+                    code: KeyCode::Char('d'),
+                    ..
+                } => {
+                    extend_line(cx);
+                    delete_selection(cx);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('i'),
+                    ..
+                } => {
+                    select_textobject(cx, textobject::TextObject::Inside, delete_selection);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('a'),
+                    ..
+                } => {
+                    select_textobject(cx, textobject::TextObject::Around, delete_selection);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('f'),
+                    ..
+                } => {
+                    will_find_char(cx, find_next_char_impl, true, true, delete_selection);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('F'),
+                    ..
+                } => {
+                    will_find_char(cx, find_prev_char_impl, true, true, delete_selection);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('t'),
+                    ..
+                } => {
+                    will_find_char(cx, find_next_char_impl, false, true, delete_selection);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('T'),
+                    ..
+                } => {
+                    will_find_char(cx, find_prev_char_impl, false, true, delete_selection);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('e'),
+                    ..
+                } => {
+                    extend_word_impl(cx, movement::move_next_long_word_end);
+                    delete_selection(cx);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('w'),
+                    ..
+                } => {
+                    extend_word_impl(cx, movement::move_next_word_start);
+                    delete_selection(cx);
+                }
+                KeyEvent {
+                    code: KeyCode::Char('b'),
+                    ..
+                } => {
+                    extend_word_impl(cx, movement::move_prev_long_word_start);
+                    delete_selection(cx);
+                }
+                _ => return,
+            }
         });
     }
 }
