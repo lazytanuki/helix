@@ -76,12 +76,6 @@ pub struct Context<'a> {
     pub jobs: &'a mut Jobs,
 }
 
-pub enum MotionAction {
-    Yank,
-    Change,
-    Delete,
-}
-
 impl<'a> Context<'a> {
     /// Push a new component onto the compositor.
     pub fn push_layer(&mut self, component: Box<dyn Component>) {
@@ -2004,6 +1998,7 @@ fn shrink_to_line_bounds(cx: &mut Context) {
 enum Operation {
     Delete,
     Change,
+    Yank,
 }
 
 fn delete_selection_impl(cx: &mut Context, op: Operation) {
@@ -2035,6 +2030,7 @@ fn delete_selection_impl(cx: &mut Context, op: Operation) {
         Operation::Change => {
             enter_insert_mode(doc);
         }
+        _ => (),
     }
 }
 
@@ -2053,13 +2049,13 @@ fn delete_selection(cx: &mut Context) {
     delete_selection_impl(cx, Operation::Delete);
 }
 
-fn motion_action(cx: &mut Context, action: &'static MotionAction) {
+fn motion_action(cx: &mut Context, operation: &'static Operation) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
-    let after_found_callback = match action {
-        MotionAction::Yank => yank,
-        MotionAction::Change => change_selection,
-        MotionAction::Delete => delete_selection,
+    let after_found_callback = match operation {
+        Operation::Yank => yank,
+        Operation::Change => change_selection,
+        Operation::Delete => delete_selection,
     };
 
     // If one selection range is more than one char wide or editor is not in select mode, perform the action now
@@ -2068,10 +2064,10 @@ fn motion_action(cx: &mut Context, action: &'static MotionAction) {
     } else {
         let help_text = [
             (
-                match action {
-                    MotionAction::Yank => "y",
-                    MotionAction::Delete => "d",
-                    MotionAction::Change => "c",
+                match operation {
+                    Operation::Yank => "y",
+                    Operation::Delete => "d",
+                    Operation::Change => "c",
                 },
                 "line",
             ),
@@ -2090,10 +2086,10 @@ fn motion_action(cx: &mut Context, action: &'static MotionAction) {
             ("l | Right", "Char on the right"),
         ];
         cx.editor.autoinfo = Some(Info::new(
-            match action {
-                MotionAction::Yank => "Yank",
-                MotionAction::Delete => "Delete",
-                MotionAction::Change => "Change",
+            match operation {
+                Operation::Yank => "Yank",
+                Operation::Delete => "Delete",
+                Operation::Change => "Change",
             },
             help_text
                 .into_iter()
@@ -2109,24 +2105,24 @@ fn motion_action(cx: &mut Context, action: &'static MotionAction) {
                     let i = i.to_digit(10).unwrap() as usize;
                     cx.editor.count =
                         std::num::NonZeroUsize::new(cx.count.map_or(i, |c| c.get() * 10 + i));
-                    motion_action(cx, action);
+                    motion_action(cx, operation);
                 }
                 key!('d') => {
-                    if matches!(action, MotionAction::Delete) {
+                    if matches!(operation, Operation::Delete) {
                         extend_line(cx);
                         after_found_callback(cx);
                     }
                     cx.editor.autoinfo = None;
                 }
                 key!('y') => {
-                    if matches!(action, MotionAction::Yank) {
+                    if matches!(operation, Operation::Yank) {
                         extend_line(cx);
                         after_found_callback(cx);
                     }
                     cx.editor.autoinfo = None;
                 }
                 key!('c') => {
-                    if matches!(action, MotionAction::Change) {
+                    if matches!(operation, Operation::Change) {
                         // goto_line_start(cx);
                         // kill_to_line_end(cx);
                         extend_line(cx);
@@ -2253,15 +2249,15 @@ fn motion_action(cx: &mut Context, action: &'static MotionAction) {
 }
 
 fn delete_motion(cx: &mut Context) {
-    motion_action(cx, &MotionAction::Delete);
+    motion_action(cx, &Operation::Delete);
 }
 
 fn change_motion(cx: &mut Context) {
-    motion_action(cx, &MotionAction::Change);
+    motion_action(cx, &Operation::Change);
 }
 
 fn yank_motion(cx: &mut Context) {
-    motion_action(cx, &MotionAction::Yank);
+    motion_action(cx, &Operation::Yank);
 }
 
 fn delete_selection_noyank(cx: &mut Context) {
