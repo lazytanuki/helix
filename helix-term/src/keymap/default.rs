@@ -66,10 +66,10 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "O" => open_above,
 
         // "d" => delete_selection,
-        "d" => delete_find,
+        "d" => delete_motion,
         "A-d" => delete_selection_noyank,
         // "c" => change_selection,
-        "c" => change_find,
+        "c" => change_motion,
         "A-c" => change_selection_noyank,
 
         "C" => copy_selection_on_next_line,
@@ -131,7 +131,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "A-u" => earlier,
         "A-U" => later,
 
-        "y" => yank,
+        "y" => yank_motion,
         // yank_all
         "p" => paste_after,
         // paste_all

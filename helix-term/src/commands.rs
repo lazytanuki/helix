@@ -76,6 +76,12 @@ pub struct Context<'a> {
     pub jobs: &'a mut Jobs,
 }
 
+pub enum MotionAction {
+    Yank,
+    Change,
+    Delete,
+}
+
 impl<'a> Context<'a> {
     /// Push a new component onto the compositor.
     pub fn push_layer(&mut self, component: Box<dyn Component>) {
@@ -250,10 +256,10 @@ impl MappableCommand {
         extend_to_line_bounds, "Extend selection to line bounds (line-wise selection)",
         shrink_to_line_bounds, "Shrink selection to line bounds (line-wise selection)",
         delete_selection, "Delete selection",
-        delete_find, "Delete next motion",
+        delete_motion, "Delete next motion",
         delete_selection_noyank, "Delete selection, without yanking",
         change_selection, "Change selection (delete and enter insert mode)",
-        change_find, "Change next motion",
+        change_motion, "Change next motion",
         change_selection_noyank, "Change selection (delete and enter insert mode, without yanking)",
         collapse_selection, "Collapse selection onto a single cursor",
         flip_selections, "Flip selection cursor and anchor",
@@ -324,6 +330,7 @@ impl MappableCommand {
         later, "Move forward in history",
         commit_undo_checkpoint, "Commit changes to a new checkpoint",
         yank, "Yank selection",
+        yank_motion, "Yank next motion",
         yank_joined_to_clipboard, "Join and yank selections to clipboard",
         yank_main_selection_to_clipboard, "Yank main selection to clipboard",
         yank_joined_to_primary_clipboard, "Join and yank selections to primary clipboard",
@@ -2046,21 +2053,28 @@ fn delete_selection(cx: &mut Context) {
     delete_selection_impl(cx, Operation::Delete);
 }
 
-// TODO:
-// - more key events (lines up, down, ...)
-fn alter_find<F>(cx: &mut Context, after_found_callback: F, help_title: &'static str)
-where
-    F: Fn(&mut Context) + 'static,
-{
+fn motion_action(cx: &mut Context, action: &'static MotionAction) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
+    let after_found_callback = match action {
+        MotionAction::Yank => yank,
+        MotionAction::Change => change_selection,
+        MotionAction::Delete => delete_selection,
+    };
 
     // If one selection range is more than one char wide or editor is not in select mode, perform the action now
     if selection.ranges().iter().any(|r| r.len() > 1) || matches!(doc.mode, Mode::Select) {
         after_found_callback(cx);
     } else {
         let help_text = [
-            ("d", "line"),
+            (
+                match action {
+                    MotionAction::Yank => "y",
+                    MotionAction::Delete => "d",
+                    MotionAction::Change => "c",
+                },
+                "line",
+            ),
             ("t | T", "Until|from char, exclusive"),
             ("f | F", "Until|from  char, inclusive"),
             ("w | W", "Until next short|long word start"),
@@ -2076,7 +2090,11 @@ where
             ("l | Right", "Char on the right"),
         ];
         cx.editor.autoinfo = Some(Info::new(
-            help_title,
+            match action {
+                MotionAction::Yank => "Yank",
+                MotionAction::Delete => "Delete",
+                MotionAction::Change => "Change",
+            },
             help_text
                 .into_iter()
                 .map(|(col1, col2)| (col1.to_string(), col2.to_string()))
@@ -2091,11 +2109,30 @@ where
                     let i = i.to_digit(10).unwrap() as usize;
                     cx.editor.count =
                         std::num::NonZeroUsize::new(cx.count.map_or(i, |c| c.get() * 10 + i));
-                    alter_find(cx, after_found_callback, help_title);
+                    motion_action(cx, action);
                 }
                 key!('d') => {
-                    extend_line(cx);
-                    after_found_callback(cx);
+                    if matches!(action, MotionAction::Delete) {
+                        extend_line(cx);
+                        after_found_callback(cx);
+                    }
+                    cx.editor.autoinfo = None;
+                }
+                key!('y') => {
+                    if matches!(action, MotionAction::Yank) {
+                        extend_line(cx);
+                        after_found_callback(cx);
+                    }
+                    cx.editor.autoinfo = None;
+                }
+                key!('c') => {
+                    if matches!(action, MotionAction::Change) {
+                        // goto_line_start(cx);
+                        // kill_to_line_end(cx);
+                        extend_line(cx);
+                        delete_selection(cx);
+                        open_above(cx);
+                    }
                     cx.editor.autoinfo = None;
                 }
                 key!('i') => {
@@ -2206,18 +2243,25 @@ where
                     move_char_left(cx);
                     cx.editor.autoinfo = None;
                 }
-                _ => return,
+                _ => {
+                    cx.editor.autoinfo = None;
+                    return;
+                }
             }
         });
     }
 }
 
-fn delete_find(cx: &mut Context) {
-    alter_find(cx, delete_selection, "Delete");
+fn delete_motion(cx: &mut Context) {
+    motion_action(cx, &MotionAction::Delete);
 }
 
-fn change_find(cx: &mut Context) {
-    alter_find(cx, change_selection, "Change");
+fn change_motion(cx: &mut Context) {
+    motion_action(cx, &MotionAction::Change);
+}
+
+fn yank_motion(cx: &mut Context) {
+    motion_action(cx, &MotionAction::Yank);
 }
 
 fn delete_selection_noyank(cx: &mut Context) {
