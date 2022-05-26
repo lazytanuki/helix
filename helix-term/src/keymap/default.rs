@@ -335,6 +335,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "N" => extend_search_prev,
 
        "esc" => exit_line_select_mode,
+        "o" => flip_selections,
 
         "v" => normal_mode,
     }));

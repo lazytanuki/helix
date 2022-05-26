@@ -564,109 +564,83 @@ fn extend_line_down(cx: &mut Context) {
     move_impl(cx, move_vertically, Direction::Forward, Movement::Extend)
 }
 
-fn extend_full_line_up(cx: &mut Context) {
-    let count = cx.count();
-    let (view, doc) = current!(cx.editor);
-    let text = doc.text().slice(..);
-    let selection = doc.selection(view.id.clone()).clone().transform(|range| {
-        let mut new_range = range;
-        if matches!(range.direction(), Direction::Forward) {
-            if range.cursor_line(text) == text.char_to_line(range.anchor) {
-                new_range = range.flip();
+fn extend_full_line_vertically(cx: &mut Context, direction: Direction) {
+    // Count is handled here because we need to check the range at each movement
+    let mut count = 1;
+    if cx.count() != 0 {
+        count = cx.count();
+    }
+    for _i in 1..=count {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let selection = doc.selection(view.id.clone()).clone().transform(|range| {
+            let mut new_range = range;
 
-                // move up
-                new_range = move_vertically(
-                    text,
-                    new_range,
-                    Direction::Backward,
-                    count,
-                    Movement::Extend,
-                );
+            // If going against the range direction
+            if range.direction() != direction {
+                // The range must be flipped when crossing the anchor
+                if range.cursor_line(text) == text.char_to_line(range.anchor) {
+                    new_range = range.flip();
+                    new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
+                } else {
+                    new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
+
+                    // Extend to line end if going up, or line start if going down
+                    match direction {
+                        Direction::Backward => {
+                            let line = new_range.cursor_line(text);
+                            let line_start = text.line_to_char(line);
+                            let pos = graphemes::prev_grapheme_boundary(
+                                text,
+                                line_end_char_index(&text, line),
+                            )
+                            .max(line_start);
+                            new_range = new_range.put_cursor(text, pos, true);
+                        }
+                        Direction::Forward => {
+                            let line = new_range.cursor_line(text);
+                            let pos = text.line_to_char(line);
+                            new_range = new_range.put_cursor(text, pos, true);
+                        }
+                    }
+                }
             } else {
-                // move up
-                new_range = move_vertically(
-                    text,
-                    new_range,
-                    Direction::Backward,
-                    count,
-                    Movement::Extend,
-                );
-                // extend to line end
-                let line = new_range.cursor_line(text);
-                let line_start = text.line_to_char(line);
-                let pos = graphemes::prev_grapheme_boundary(text, line_end_char_index(&text, line))
-                    .max(line_start);
+                new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
+                let pos;
+
+                // Extend to line start if going up, or line end if going down
+                match direction {
+                    Direction::Forward => {
+                        let line = new_range.cursor_line(text);
+                        let line_start = text.line_to_char(line);
+                        pos = graphemes::prev_grapheme_boundary(
+                            text,
+                            line_end_char_index(&text, line),
+                        )
+                        .max(line_start);
+                        new_range = new_range.put_cursor(text, pos, true);
+                    }
+                    Direction::Backward => {
+                        let line = new_range.cursor_line(text);
+                        pos = text.line_to_char(line);
+                        new_range = new_range.put_cursor(text, pos, true);
+                    }
+                }
+
                 new_range = new_range.put_cursor(text, pos, true);
             }
-        } else {
-            // move up
-            new_range = move_vertically(
-                text,
-                new_range,
-                Direction::Backward,
-                count,
-                Movement::Extend,
-            );
-            // extend to line start
-            let line = new_range.cursor_line(text);
-            let pos = text.line_to_char(line);
+            new_range
+        });
+        doc.set_selection(view.id, selection);
+    }
+}
 
-            new_range = new_range.put_cursor(text, pos, true);
-        }
-        new_range
-    });
-    doc.set_selection(view.id, selection);
-
-    // extend_line_up(cx);
-    // extend_to_line_start(cx);
+fn extend_full_line_up(cx: &mut Context) {
+    extend_full_line_vertically(cx, Direction::Backward);
 }
 
 fn extend_full_line_down(cx: &mut Context) {
-    let count = cx.count();
-    let (view, doc) = current!(cx.editor);
-    let text = doc.text().slice(..);
-    let selection = doc.selection(view.id).clone().transform(|range| {
-        let mut new_range = range;
-        if matches!(range.direction(), Direction::Backward) {
-            if range.cursor_line(text) == text.char_to_line(range.anchor) {
-                new_range = range.flip();
-
-                // move down
-                new_range =
-                    move_vertically(text, new_range, Direction::Forward, count, Movement::Extend);
-            } else {
-                // move down
-                new_range =
-                    move_vertically(text, new_range, Direction::Forward, count, Movement::Extend);
-                // extend to line start
-                let line = new_range.cursor_line(text);
-                let pos = text.line_to_char(line);
-                new_range = new_range.put_cursor(text, pos, true);
-
-                // move down and extend to line start
-                // TODO same as above
-                // TODO move the code to move the cursor up/down or extend to line start/end
-                // into a function that's gonna be inside this function ?
-                // For this, merge boh extend_full_line functions into one
-            }
-        } else {
-            // move down
-            new_range =
-                move_vertically(text, new_range, Direction::Forward, count, Movement::Extend);
-            // extend to line end
-            let line = new_range.cursor_line(text);
-            let line_start = text.line_to_char(line);
-            let pos = graphemes::prev_grapheme_boundary(text, line_end_char_index(&text, line))
-                .max(line_start);
-
-            new_range = new_range.put_cursor(text, pos, true);
-        }
-        new_range
-    });
-    doc.set_selection(view.id, selection);
-
-    // extend_line_down(cx);
-    // extend_to_line_end(cx);
+    extend_full_line_vertically(cx, Direction::Forward);
 }
 
 fn goto_line_end_impl(view: &mut View, doc: &mut Document, movement: Movement) {
