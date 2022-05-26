@@ -201,6 +201,8 @@ impl MappableCommand {
         extend_char_right, "Extend right",
         extend_line_up, "Extend up",
         extend_line_down, "Extend down",
+        extend_full_line_up, "Extend full up",
+        extend_full_line_down, "Extend full line down",
         copy_selection_on_next_line, "Copy selection on next line",
         copy_selection_on_prev_line, "Copy selection on previous line",
         move_next_word_start, "Move to beginning of next word",
@@ -275,6 +277,8 @@ impl MappableCommand {
         normal_mode, "Enter normal mode",
         select_mode, "Enter selection extend mode",
         exit_select_mode, "Exit selection mode",
+        line_select_mode, "Enter line-wise extend mode",
+        exit_line_select_mode, "Exit line-wise selection mode",
         goto_definition, "Goto definition",
         add_newline_above, "Add newline above",
         add_newline_below, "Add newline below",
@@ -558,6 +562,111 @@ fn extend_line_up(cx: &mut Context) {
 
 fn extend_line_down(cx: &mut Context) {
     move_impl(cx, move_vertically, Direction::Forward, Movement::Extend)
+}
+
+fn extend_full_line_up(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id.clone()).clone().transform(|range| {
+        let mut new_range = range;
+        if matches!(range.direction(), Direction::Forward) {
+            if range.cursor_line(text) == text.char_to_line(range.anchor) {
+                new_range = range.flip();
+
+                // move up
+                new_range = move_vertically(
+                    text,
+                    new_range,
+                    Direction::Backward,
+                    count,
+                    Movement::Extend,
+                );
+            } else {
+                // move up
+                new_range = move_vertically(
+                    text,
+                    new_range,
+                    Direction::Backward,
+                    count,
+                    Movement::Extend,
+                );
+                // extend to line end
+                let line = new_range.cursor_line(text);
+                let line_start = text.line_to_char(line);
+                let pos = graphemes::prev_grapheme_boundary(text, line_end_char_index(&text, line))
+                    .max(line_start);
+                new_range = new_range.put_cursor(text, pos, true);
+            }
+        } else {
+            // move up
+            new_range = move_vertically(
+                text,
+                new_range,
+                Direction::Backward,
+                count,
+                Movement::Extend,
+            );
+            // extend to line start
+            let line = new_range.cursor_line(text);
+            let pos = text.line_to_char(line);
+
+            new_range = new_range.put_cursor(text, pos, true);
+        }
+        new_range
+    });
+    doc.set_selection(view.id, selection);
+
+    // extend_line_up(cx);
+    // extend_to_line_start(cx);
+}
+
+fn extend_full_line_down(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let mut new_range = range;
+        if matches!(range.direction(), Direction::Backward) {
+            if range.cursor_line(text) == text.char_to_line(range.anchor) {
+                new_range = range.flip();
+
+                // move down
+                new_range =
+                    move_vertically(text, new_range, Direction::Forward, count, Movement::Extend);
+            } else {
+                // move down
+                new_range =
+                    move_vertically(text, new_range, Direction::Forward, count, Movement::Extend);
+                // extend to line start
+                let line = new_range.cursor_line(text);
+                let pos = text.line_to_char(line);
+                new_range = new_range.put_cursor(text, pos, true);
+
+                // move down and extend to line start
+                // TODO same as above
+                // TODO move the code to move the cursor up/down or extend to line start/end
+                // into a function that's gonna be inside this function ?
+                // For this, merge boh extend_full_line functions into one
+            }
+        } else {
+            // move down
+            new_range =
+                move_vertically(text, new_range, Direction::Forward, count, Movement::Extend);
+            // extend to line end
+            let line = new_range.cursor_line(text);
+            let line_start = text.line_to_char(line);
+            let pos = graphemes::prev_grapheme_boundary(text, line_end_char_index(&text, line))
+                .max(line_start);
+
+            new_range = new_range.put_cursor(text, pos, true);
+        }
+        new_range
+    });
+    doc.set_selection(view.id, selection);
+
+    // extend_line_down(cx);
+    // extend_to_line_end(cx);
 }
 
 fn goto_line_end_impl(view: &mut View, doc: &mut Document, movement: Movement) {
@@ -2820,6 +2929,35 @@ fn select_mode(cx: &mut Context) {
 fn exit_select_mode(cx: &mut Context) {
     let doc = doc_mut!(cx.editor);
     if doc.mode == Mode::Select {
+        doc.mode = Mode::Normal;
+    }
+}
+
+fn line_select_mode(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+
+    // Make sure end-of-document selections are also 1-width.
+    // (With the exception of being in an empty document, of course.)
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        if range.is_empty() && range.head == text.len_chars() {
+            Range::new(
+                graphemes::prev_grapheme_boundary(text, range.anchor),
+                range.head,
+            )
+        } else {
+            range
+        }
+    });
+    doc.set_selection(view.id, selection);
+
+    extend_to_line_bounds(cx);
+    doc_mut!(cx.editor).mode = Mode::LineSelect;
+}
+
+fn exit_line_select_mode(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    if doc.mode == Mode::LineSelect {
         doc.mode = Mode::Normal;
     }
 }

@@ -35,6 +35,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "E" => move_next_long_word_end,
 
         "v" => select_mode,
+        "V" => line_select_mode,
         "G" => goto_line,
         "g" => { "Goto"
             "g" => goto_file_start,
@@ -325,6 +326,18 @@ pub fn default() -> HashMap<Mode, Keymap> {
 
         "v" => normal_mode,
     }));
+    let mut line_select = normal.clone();
+    line_select.merge_nodes(keymap!({ "Line-select mode"
+        "j" | "down" => extend_full_line_down,
+        "k" | "up" => extend_full_line_up,
+
+        "n" => extend_search_next,
+        "N" => extend_search_prev,
+
+       "esc" => exit_line_select_mode,
+
+        "v" => normal_mode,
+    }));
     let insert = keymap!({ "Insert mode"
         "esc" => normal_mode,
 
@@ -371,5 +384,6 @@ pub fn default() -> HashMap<Mode, Keymap> {
         Mode::Normal => Keymap::new(normal),
         Mode::Select => Keymap::new(select),
         Mode::Insert => Keymap::new(insert),
+        Mode::LineSelect => Keymap::new(line_select),
     )
 }
