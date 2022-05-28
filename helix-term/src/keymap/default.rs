@@ -324,6 +324,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "end" => extend_to_line_end,
         "esc" => exit_select_mode,
 
+        "o" => flip_selections,
         "v" => normal_mode,
     }));
     let mut line_select = normal.clone();

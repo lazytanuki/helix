@@ -566,6 +566,34 @@ fn extend_line_down(cx: &mut Context) {
 
 fn extend_full_line_vertically(cx: &mut Context, direction: Direction) {
     // Count is handled here because we need to check the range at each movement
+    // TODO: see [this issue](https://github.com/helix-editor/helix/issues/2130)
+    let mut count = 1;
+    if cx.count() != 0 {
+        count = cx.count();
+    }
+    cx.count = None;
+    for _i in 1..=count {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let primary_range = doc.selection(view.id).primary();
+        let current_line = text.char_to_line(primary_range.clone().head);
+        let anchor_line = text.char_to_line(primary_range.anchor);
+
+        // If going against the range direction
+        extend_to_line_bounds(cx);
+        if primary_range.direction() != direction {
+            if current_line == anchor_line {
+                flip_selections(cx);
+            }
+        }
+        move_impl(cx, move_vertically, direction, Movement::Extend);
+        extend_to_line_bounds(cx);
+    }
+}
+
+fn extend_full_line_vertically_old(cx: &mut Context, direction: Direction) {
+    // Count is handled here because we need to check the range at each movement
+    // TODO: see [this issue](https://github.com/helix-editor/helix/issues/2130)
     let mut count = 1;
     if cx.count() != 0 {
         count = cx.count();
@@ -578,8 +606,17 @@ fn extend_full_line_vertically(cx: &mut Context, direction: Direction) {
 
             // If going against the range direction
             if range.direction() != direction {
+                // if range.cursor_line(text) == text.char_to_line(range.anchor) - 1
+                //     && direction == Direction::Forward
+                // {
+                //     new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
+                //     new_range = new_range.flip();
+                // }
                 // The range must be flipped when crossing the anchor
-                if range.cursor_line(text) == text.char_to_line(range.anchor) {
+                log::error!("head line: {}", range.cursor_line(text));
+                log::error!("head line: {}", text.char_to_line(range.head));
+                log::error!("anchor line: {}", text.char_to_line(range.anchor));
+                if text.char_to_line(range.head) == text.char_to_line(range.anchor) {
                     new_range = range.flip();
                     new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
                 } else {
@@ -2192,7 +2229,7 @@ fn motion_action(cx: &mut Context, operation: &'static Operation) {
                 }
                 key!('d') => {
                     if matches!(operation, Operation::Delete) {
-                        extend_line(cx);
+                        extend_to_line_bounds(cx);
                         after_found_callback(cx);
                     }
                     cx.editor.autoinfo = None;
@@ -2200,15 +2237,14 @@ fn motion_action(cx: &mut Context, operation: &'static Operation) {
                 key!('y') => {
                     if matches!(operation, Operation::Yank) {
                         extend_line(cx);
+                        extend_to_line_bounds(cx);
                         after_found_callback(cx);
                     }
                     cx.editor.autoinfo = None;
                 }
                 key!('c') => {
                     if matches!(operation, Operation::Change) {
-                        // goto_line_start(cx);
-                        // kill_to_line_end(cx);
-                        extend_line(cx);
+                        extend_to_line_bounds(cx);
                         delete_selection(cx);
                         open_above(cx);
                     }
