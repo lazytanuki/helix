@@ -201,7 +201,7 @@ impl MappableCommand {
         extend_char_right, "Extend right",
         extend_line_up, "Extend up",
         extend_line_down, "Extend down",
-        extend_full_line_up, "Extend full up",
+        extend_full_line_up, "Extend full line up",
         extend_full_line_down, "Extend full line down",
         copy_selection_on_next_line, "Copy selection on next line",
         copy_selection_on_prev_line, "Copy selection on previous line",
@@ -566,7 +566,6 @@ fn extend_line_down(cx: &mut Context) {
 
 fn extend_full_line_vertically(cx: &mut Context, direction: Direction) {
     // Count is handled here because we need to check the range at each movement
-    // TODO: see [this issue](https://github.com/helix-editor/helix/issues/2130)
     let mut count = 1;
     if cx.count() != 0 {
         count = cx.count();
@@ -579,6 +578,12 @@ fn extend_full_line_vertically(cx: &mut Context, direction: Direction) {
         let current_line = text.char_to_line(primary_range.clone().head);
         let anchor_line = text.char_to_line(primary_range.anchor);
 
+        // If not already extended to the end in forward mode, only extend to the end, not to the next line
+        if direction == Direction::Forward && current_line == anchor_line {
+            extend_to_line_bounds(cx);
+            return;
+        }
+
         // If going against the range direction
         extend_to_line_bounds(cx);
         if primary_range.direction() != direction {
@@ -588,87 +593,6 @@ fn extend_full_line_vertically(cx: &mut Context, direction: Direction) {
         }
         move_impl(cx, move_vertically, direction, Movement::Extend);
         extend_to_line_bounds(cx);
-    }
-}
-
-fn extend_full_line_vertically_old(cx: &mut Context, direction: Direction) {
-    // Count is handled here because we need to check the range at each movement
-    // TODO: see [this issue](https://github.com/helix-editor/helix/issues/2130)
-    let mut count = 1;
-    if cx.count() != 0 {
-        count = cx.count();
-    }
-    for _i in 1..=count {
-        let (view, doc) = current!(cx.editor);
-        let text = doc.text().slice(..);
-        let selection = doc.selection(view.id.clone()).clone().transform(|range| {
-            let mut new_range = range;
-
-            // If going against the range direction
-            if range.direction() != direction {
-                // if range.cursor_line(text) == text.char_to_line(range.anchor) - 1
-                //     && direction == Direction::Forward
-                // {
-                //     new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
-                //     new_range = new_range.flip();
-                // }
-                // The range must be flipped when crossing the anchor
-                log::error!("head line: {}", range.cursor_line(text));
-                log::error!("head line: {}", text.char_to_line(range.head));
-                log::error!("anchor line: {}", text.char_to_line(range.anchor));
-                if text.char_to_line(range.head) == text.char_to_line(range.anchor) {
-                    new_range = range.flip();
-                    new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
-                } else {
-                    new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
-
-                    // Extend to line end if going up, or line start if going down
-                    match direction {
-                        Direction::Backward => {
-                            let line = new_range.cursor_line(text);
-                            let line_start = text.line_to_char(line);
-                            let pos = graphemes::prev_grapheme_boundary(
-                                text,
-                                line_end_char_index(&text, line),
-                            )
-                            .max(line_start);
-                            new_range = new_range.put_cursor(text, pos, true);
-                        }
-                        Direction::Forward => {
-                            let line = new_range.cursor_line(text);
-                            let pos = text.line_to_char(line);
-                            new_range = new_range.put_cursor(text, pos, true);
-                        }
-                    }
-                }
-            } else {
-                new_range = move_vertically(text, new_range, direction, 1, Movement::Extend);
-                let pos;
-
-                // Extend to line start if going up, or line end if going down
-                match direction {
-                    Direction::Forward => {
-                        let line = new_range.cursor_line(text);
-                        let line_start = text.line_to_char(line);
-                        pos = graphemes::prev_grapheme_boundary(
-                            text,
-                            line_end_char_index(&text, line),
-                        )
-                        .max(line_start);
-                        new_range = new_range.put_cursor(text, pos, true);
-                    }
-                    Direction::Backward => {
-                        let line = new_range.cursor_line(text);
-                        pos = text.line_to_char(line);
-                        new_range = new_range.put_cursor(text, pos, true);
-                    }
-                }
-
-                new_range = new_range.put_cursor(text, pos, true);
-            }
-            new_range
-        });
-        doc.set_selection(view.id, selection);
     }
 }
 

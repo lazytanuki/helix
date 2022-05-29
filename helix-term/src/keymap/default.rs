@@ -35,7 +35,11 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "E" => move_next_long_word_end,
 
         "v" => select_mode,
-        "V" => line_select_mode,
+        // "V" => line_select_mode,
+        "V" => { "Visual" sticky=true
+            "k" | "up" => extend_full_line_up,
+            "j" | "down" => extend_full_line_down,
+        },
         "G" => goto_line,
         "g" => { "Goto"
             "g" => goto_file_start,
@@ -88,8 +92,10 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "A-n" | "A-right" => select_next_sibling,
 
         "%" => select_all,
-        "x" => extend_line,
-        "X" => extend_to_line_bounds,
+        // "x" => extend_line,
+        // "X" => extend_to_line_bounds,
+        "x" => extend_full_line_down,
+        "X" => extend_full_line_up,
         "A-x" => shrink_to_line_bounds,
 
         "m" => { "Match"
