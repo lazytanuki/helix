@@ -2160,7 +2160,6 @@ fn motion_action(cx: &mut Context, operation: &'static Operation) {
                 }
                 key!('y') => {
                     if matches!(operation, Operation::Yank) {
-                        extend_line(cx);
                         extend_to_line_bounds(cx);
                         after_found_callback(cx);
                     }
