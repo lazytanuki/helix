@@ -326,6 +326,9 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "T" => extend_till_prev_char,
         "F" => extend_prev_char,
 
+        "a" => select_textobject_around,
+        "i" => select_textobject_inner,
+
         "home" => extend_to_line_start,
         "end" => extend_to_line_end,
         "esc" => exit_select_mode,
