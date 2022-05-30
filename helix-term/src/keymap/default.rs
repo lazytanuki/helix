@@ -36,11 +36,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
 
         "v" => select_mode,
         "V" => line_select_mode,
-        // "V" => { "Visual" sticky=true
-        //     "k" | "up" => extend_full_line_up,
-        //     "j" | "down" => extend_full_line_down,
-        // },
-        "G" => goto_line,
+        "G" => goto_last_line,
         "g" => { "Goto"
             "g" => goto_file_start,
             "e" => goto_last_line,
