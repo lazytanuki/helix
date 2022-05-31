@@ -68,12 +68,12 @@ pub fn default() -> HashMap<Mode, Keymap> {
 
         // "d" => delete_selection,
         "d" => delete_motion,
-        "A-d" => delete_selection_noyank,
+        // "A-d" => delete_selection_noyank,
         // "c" => change_selection,
         "c" => change_motion,
-        "A-c" => change_selection_noyank,
+        // "A-c" => change_selection_noyank,
 
-        "C" => copy_selection_on_next_line,
+        "A-d" => copy_selection_on_next_line,
         "A-C" => copy_selection_on_prev_line,
 
 
@@ -90,9 +90,12 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "%" => select_all,
         // "x" => extend_line,
         // "X" => extend_to_line_bounds,
-        "x" => extend_full_line_down,
-        "X" => extend_full_line_up,
+        "x" => delete_selection,
         "A-x" => shrink_to_line_bounds,
+
+        "D" => kill_to_line_end,
+        "C" => change_to_line_end,
+        "Y" => yank_to_line_end,
 
         "m" => { "Match"
             "m" => match_brackets,

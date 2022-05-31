@@ -322,6 +322,8 @@ impl MappableCommand {
         delete_word_forward, "Delete next word",
         kill_to_line_start, "Delete content till the start of the line",
         kill_to_line_end, "Delete content till the end of the line",
+        change_to_line_start, "Change content till the start of the line",
+        change_to_line_end, "Change content till the end of the line",
         undo, "Undo change",
         redo, "Redo change",
         earlier, "Move backward in history",
@@ -333,6 +335,9 @@ impl MappableCommand {
         yank_main_selection_to_clipboard, "Yank main selection to clipboard",
         yank_joined_to_primary_clipboard, "Join and yank selections to primary clipboard",
         yank_main_selection_to_primary_clipboard, "Yank main selection to primary clipboard",
+        yank_collapse, "Yank selection and collapse",
+        yank_to_line_end, "Yank content till the end of the line",
+        yank_to_line_start, "Yank content till the start of the line",
         replace_with_yanked, "Replace with yanked text",
         replace_selections_with_clipboard, "Replace selections by clipboard content",
         replace_selections_with_primary_clipboard, "Replace selections by primary clipboard content",
@@ -775,6 +780,16 @@ fn kill_to_line_end(cx: &mut Context) {
         new_range
     });
     delete_selection_insert_mode(doc, view, &selection);
+}
+
+fn change_to_line_start(cx: &mut Context) {
+    kill_to_line_start(cx);
+    insert_mode(cx);
+}
+
+fn change_to_line_end(cx: &mut Context) {
+    kill_to_line_end(cx);
+    insert_mode(cx);
 }
 
 fn goto_first_nonwhitespace(cx: &mut Context) {
@@ -2097,7 +2112,7 @@ fn motion_action(cx: &mut Context, operation: &'static Operation) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
     let after_found_callback = match operation {
-        Operation::Yank => yank,
+        Operation::Yank => yank_collapse,
         Operation::Change => change_selection,
         Operation::Delete => delete_selection,
     };
@@ -3381,6 +3396,7 @@ fn commit_undo_checkpoint(cx: &mut Context) {
 fn yank(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
+    let mode = doc.mode;
 
     let values: Vec<String> = doc
         .selection(view.id)
@@ -3399,7 +3415,11 @@ fn yank(cx: &mut Context) {
         .write(cx.register.unwrap_or('"'), values);
 
     cx.editor.set_status(msg);
-    exit_select_mode(cx);
+    match mode {
+        Mode::Select => exit_select_mode(cx),
+        Mode::LineSelect => exit_line_select_mode(cx),
+        _ => (),
+    };
 }
 
 fn yank_joined_to_clipboard_impl(
@@ -3473,6 +3493,21 @@ fn yank_joined_to_primary_clipboard(cx: &mut Context) {
 fn yank_main_selection_to_primary_clipboard(cx: &mut Context) {
     let _ = yank_main_selection_to_clipboard_impl(cx.editor, ClipboardType::Selection);
     exit_select_mode(cx);
+}
+
+fn yank_collapse(cx: &mut Context) {
+    yank(cx);
+    collapse_selection(cx);
+}
+
+fn yank_to_line_end(cx: &mut Context) {
+    extend_to_line_end(cx);
+    yank_collapse(cx);
+}
+
+fn yank_to_line_start(cx: &mut Context) {
+    extend_to_line_start(cx);
+    yank_collapse(cx);
 }
 
 #[derive(Copy, Clone)]
