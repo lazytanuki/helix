@@ -73,8 +73,8 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "c" => change_motion,
         // "A-c" => change_selection_noyank,
 
-        "A-d" => copy_selection_on_next_line,
-        "A-C" => copy_selection_on_prev_line,
+        "C-d" => copy_selection_on_next_line,
+        // "A-c" => copy_selection_on_prev_line,
 
 
         "s" => select_regex,
@@ -172,8 +172,8 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "esc" => normal_mode,
         "C-b" | "pageup" => page_up,
         "C-f" | "pagedown" => page_down,
-        "C-u" => half_page_up,
-        "C-d" => half_page_down,
+        // "C-u" => half_page_up,
+        // "C-d" => half_page_down,
 
         "C-w" => { "Window"
             "C-w" | "w" => rotate_view,

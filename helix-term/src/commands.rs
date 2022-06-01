@@ -2408,6 +2408,7 @@ fn append_mode(cx: &mut Context) {
         )
     });
     doc.set_selection(view.id, selection);
+    collapse_selection(cx);
 }
 
 fn file_picker(cx: &mut Context) {
