@@ -156,14 +156,23 @@ pub struct Config {
     pub rulers: Vec<u16>,
     #[serde(default)]
     pub whitespace: WhitespaceConfig,
+<<<<<<< HEAD
     /// Vertical indent width guides.
     pub indent_guides: IndentGuidesConfig,
+||||||| parent of c23699e5 (feat: doc_preview and completions menu preselect)
+=======
+    /// Whether to show the documentation of the first item in the completion menu. Defaults to false.
+    pub completion_doc_preview: bool,
+>>>>>>> c23699e5 (feat: doc_preview and completions menu preselect)
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LspConfig {
-    pub display_messages: bool,
+    /// Whether to display LSP status messages below the statusline
+    pub display_messages: Option<bool>,
+    /// Whether to use show the LSP server preselected suggestion at the top of the menu. Defaults to true.
+    pub preselect: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -409,7 +418,12 @@ impl Default for Config {
             lsp: LspConfig::default(),
             rulers: Vec::new(),
             whitespace: WhitespaceConfig::default(),
+<<<<<<< HEAD
             indent_guides: IndentGuidesConfig::default(),
+||||||| parent of c23699e5 (feat: doc_preview and completions menu preselect)
+=======
+            completion_doc_preview: false,
+>>>>>>> c23699e5 (feat: doc_preview and completions menu preselect)
         }
     }
 }
