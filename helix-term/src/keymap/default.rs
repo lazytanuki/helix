@@ -96,6 +96,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
             "d" => surround_delete,
             "a" => select_textobject_around,
             "i" => select_textobject_inner,
+            "S" => select_references_to_symbol_under_cursor,
         },
         "[" => { "Left bracket"
             "d" => goto_prev_diag,
@@ -259,7 +260,6 @@ pub fn default() -> HashMap<Mode, Keymap> {
             "/" => global_search,
             "k" => hover,
             "r" => rename_symbol,
-            "h" => select_references_to_symbol_under_cursor,
             "?" => command_palette,
         },
         "z" => { "View"
