@@ -160,6 +160,8 @@ pub struct Config {
     pub indent_guides: IndentGuidesConfig,
     /// Whether to show the documentation of the first item in the completion menu. Defaults to false.
     pub completion_doc_preview: bool,
+    /// Persistently display open buffers along the top
+    pub bufferline: BufferLine,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -231,6 +233,24 @@ impl std::ops::Deref for CursorShapeConfig {
 impl Default for CursorShapeConfig {
     fn default() -> Self {
         Self([CursorKind::Block; 3])
+    }
+}
+
+/// bufferline render modes
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum BufferLine {
+    /// Don't render bufferline
+    Never,
+    /// Always render
+    Always,
+    /// Only if multiple buffers are open
+    Multiple,
+}
+
+impl Default for BufferLine {
+    fn default() -> Self {
+        BufferLine::Multiple
     }
 }
 
@@ -416,6 +436,7 @@ impl Default for Config {
             whitespace: WhitespaceConfig::default(),
             indent_guides: IndentGuidesConfig::default(),
             completion_doc_preview: false,
+            bufferline: BufferLine::default(),
         }
     }
 }

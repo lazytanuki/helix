@@ -24,7 +24,7 @@ use helix_view::{
     keyboard::{KeyCode, KeyModifiers},
     Document, Editor, Theme, View,
 };
-use std::borrow::Cow;
+use std::{borrow::Cow, path::PathBuf};
 
 use crossterm::event::{Event, MouseButton, MouseEvent, MouseEventKind};
 use tui::buffer::Buffer as Surface;
@@ -132,7 +132,7 @@ impl EditorView {
             highlights,
             &editor.config(),
         );
-        Self::render_gutter(editor, doc, view, view.area, surface, theme, is_focused);
+        Self::render_gutter(editor, doc, view, area, surface, theme, is_focused);
         Self::render_rulers(editor, doc, view, inner, surface, theme);
 
         if is_focused {
@@ -575,6 +575,45 @@ impl EditorView {
                         .set_style(style);
                 }
             }
+        }
+    }
+
+    /// Render bufferline at the top
+    pub fn render_bufferline(editor: &Editor, viewport: Rect, surface: &mut Surface) {
+        let pb = PathBuf::from(SCRATCH_BUFFER_NAME); // default filename to use for scratch buffer
+        surface.clear_with(viewport, editor.theme.get("ui.statusline"));
+        let mut len = 0usize;
+        for doc in editor.documents() {
+            let fname = doc
+                .path()
+                .unwrap_or(&pb)
+                .file_name()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap();
+
+            let style = if view!(editor).doc == doc.id() {
+                // editor.theme.get("ui.background")
+                editor
+                    .theme
+                    .try_get("ui.bufferline.active")
+                    .unwrap_or_else(|| editor.theme.get("ui.background"))
+            } else {
+                // editor.theme.get("ui.statusline")
+                editor
+                    .theme
+                    .try_get("ui.bufferline")
+                    .unwrap_or_else(|| editor.theme.get("ui.statusline"))
+            };
+
+            let (text, offset) = if doc.is_modified() {
+                (format!(" {}[+] ", fname), fname.len() + 5)
+            } else {
+                (format!(" {} ", fname), fname.len() + 2)
+            };
+
+            surface.set_string(1 + viewport.x + len as u16, viewport.y, text, style);
+            len += offset;
         }
     }
 
@@ -1348,8 +1387,27 @@ impl Component for EditorView {
         // clear with background color
         surface.set_style(area, cx.editor.theme.get("ui.background"));
         let config = cx.editor.config();
+
+        // check if bufferline should be rendered
+        use helix_view::editor::BufferLine;
+        let use_bufferline = match config.bufferline {
+            BufferLine::Always => true,
+            BufferLine::Multiple if cx.editor.documents().count() > 1 => true,
+            _ => false,
+        };
+
+        // -1 for commandline and -1 for bufferline
+        let editor_area = if use_bufferline {
+            area.clip_bottom(1).clip_top(1)
+        } else {
+            area.clip_bottom(1)
+        };
         // if the terminal size suddenly changed, we need to trigger a resize
-        cx.editor.resize(area.clip_bottom(1)); // -1 from bottom for commandline
+        cx.editor.resize(editor_area);
+
+        if use_bufferline {
+            Self::render_bufferline(cx.editor, area.with_height(1), surface);
+        }
 
         for (view, is_focused) in cx.editor.tree.views() {
             let doc = cx.editor.document(view.doc).unwrap();
