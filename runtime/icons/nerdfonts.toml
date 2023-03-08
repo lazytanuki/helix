@@ -43,6 +43,12 @@ event = {icon = ""}
 operator = {icon = ""}
 type-parameter = {icon = ""}
 
+[ui]
+file = {icon = ""}
+folder = {icon = ""}
+folder_opened = {icon = ""}
+git_branch = {icon = ""}
+
 [mime-type]
 # This is heavily based on https://github.com/nvim-tree/nvim-web-devicons
 ".babelrc" = { icon = "ﬥ", color = "#cbcb41" }

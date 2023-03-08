@@ -68,6 +68,7 @@ pub struct Icons {
     pub symbol_kind: Option<HashMap<String, Icon>>,
     pub breakpoint: Breakpoint,
     pub diff: Diff,
+    pub ui: Option<HashMap<String, Icon>>,
 }
 
 impl Icons {
@@ -109,6 +110,11 @@ impl Icons {
                 icon.style = Some(IconStyle::Default(Style::default()));
             }
         }
+        if let Some(ui_icons) = &mut self.ui {
+            for (_, icon) in ui_icons.iter_mut() {
+                icon.style = Some(IconStyle::Default(Style::default()));
+            }
+        }
         self.diagnostic.error.style = Some(IconStyle::Default(Style::default()));
         self.diagnostic.warning.style = Some(IconStyle::Default(Style::default()));
         self.diagnostic.hint.style = Some(IconStyle::Default(Style::default()));
@@ -135,11 +141,7 @@ impl Icons {
                     .map(|extension_or_filename| extension_or_filename.to_str())?
                     .and_then(|extension_or_filename| mime_type_icons.get(extension_or_filename))
             })
-            .or_else(|| {
-                self.symbol_kind
-                    .as_ref()
-                    .and_then(|symbol_kind_icons| symbol_kind_icons.get("file"))
-            })
+            .or_else(|| self.ui.as_ref().and_then(|ui_icons| ui_icons.get("file")))
     }
 }
 
