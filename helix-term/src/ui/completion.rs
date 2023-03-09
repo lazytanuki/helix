@@ -1,5 +1,6 @@
 use crate::compositor::{Component, Context, Event, EventResult};
 use helix_view::{
+    document::SavePoint,
     editor::CompleteAction,
     icons::Icons,
     theme::{Modifier, Style},
@@ -7,7 +8,7 @@ use helix_view::{
 };
 use tui::{buffer::Buffer as Surface, text::Span};
 
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 use helix_core::{Change, Transaction};
 use helix_view::{graphics::Rect, Document, Editor};
@@ -103,6 +104,7 @@ impl Completion {
 
     pub fn new(
         editor: &Editor,
+        savepoint: Arc<SavePoint>,
         mut items: Vec<CompletionItem>,
         offset_encoding: helix_lsp::OffsetEncoding,
         start_offset: usize,
@@ -215,11 +217,10 @@ impl Completion {
             let (view, doc) = current!(editor);
 
             // if more text was entered, remove it
-            doc.restore(view);
+            doc.restore(view, &savepoint);
 
             match event {
                 PromptEvent::Abort => {
-                    doc.restore(view);
                     editor.last_completion = None;
                 }
                 PromptEvent::Update => {
@@ -237,7 +238,6 @@ impl Completion {
                     );
 
                     // initialize a savepoint
-                    doc.savepoint();
                     doc.apply(&transaction, view.id);
 
                     editor.last_completion = Some(CompleteAction {
