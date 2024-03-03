@@ -1119,6 +1119,7 @@ pub enum CompleteAction {
     Applied {
         trigger_offset: usize,
         changes: Vec<Change>,
+        placeholder: bool,
     },
 }
 
